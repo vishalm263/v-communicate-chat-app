@@ -15,6 +15,7 @@ export default defineConfig({
     })
   ],
   build: {
+    outDir: 'public',
     // Increase the warning limit to avoid noise in terminal
     chunkSizeWarningLimit: 1000,
     // Optimize large dependencies into separate chunks
