@@ -4,9 +4,9 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, username, email, password } = req.body;
   try {
-    if (!fullName || !email || !password) {
+    if (!fullName || !username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -14,15 +14,29 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters" });
     }
 
-    const user = await User.findOne({ email });
+    if (username.length < 3) {
+      return res.status(400).json({ message: "Username must be at least 3 characters" });
+    }
 
-    if (user) return res.status(400).json({ message: "Email already exists" });
+    const userExists = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (userExists) {
+      if (userExists.email === email) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      if (userExists.username === username) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+    }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
       fullName,
+      username,
       email,
       password: hashedPassword,
     });
@@ -35,6 +49,7 @@ export const signup = async (req, res) => {
       res.status(201).json({
         _id: newUser._id,
         fullName: newUser.fullName,
+        username: newUser.username,
         email: newUser.email,
         profilePic: newUser.profilePic,
       });
@@ -48,9 +63,15 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { emailOrUsername, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    if (!emailOrUsername || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+    
+    const user = await User.findOne({
+      $or: [{ email: emailOrUsername }, { username: emailOrUsername }],
+    });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -66,8 +87,10 @@ export const login = async (req, res) => {
     res.status(200).json({
       _id: user._id,
       fullName: user.fullName,
+      username: user.username,
       email: user.email,
       profilePic: user.profilePic,
+      hideStatus: user.hideStatus,
     });
   } catch (error) {
     console.log("Error in login controller", error.message);
@@ -87,17 +110,40 @@ export const logout = (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic } = req.body;
+    const { profilePic, username, hideStatus } = req.body;
     const userId = req.user._id;
+    const updates = {};
 
-    if (!profilePic) {
-      return res.status(400).json({ message: "Profile pic is required" });
+    if (profilePic) {
+      const uploadResponse = await cloudinary.uploader.upload(profilePic);
+      updates.profilePic = uploadResponse.secure_url;
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    if (username) {
+      // Check if username is already taken by another user
+      const existingUser = await User.findOne({ 
+        username, 
+        _id: { $ne: userId } // Exclude current user from search
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      
+      updates.username = username;
+    }
+
+    if (hideStatus !== undefined) {
+      updates.hideStatus = hideStatus;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No update data provided" });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { profilePic: uploadResponse.secure_url },
+      updates,
       { new: true }
     );
 

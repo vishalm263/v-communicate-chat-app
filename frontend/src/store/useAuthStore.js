@@ -74,6 +74,11 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.put("/auth/update-profile", data);
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
+      
+      // Reconnect socket to update username info if username was changed
+      if (data.username) {
+        get().reconnectSocket();
+      }
     } catch (error) {
       console.log("error in update profile:", error);
       toast.error(error.response.data.message);
@@ -89,7 +94,9 @@ export const useAuthStore = create((set, get) => ({
     const socket = io(BASE_URL, {
       query: {
         userId: authUser._id,
+        username: authUser.username || authUser.fullName
       },
+      withCredentials: true
     });
     socket.connect();
 
@@ -99,7 +106,16 @@ export const useAuthStore = create((set, get) => ({
       set({ onlineUsers: userIds });
     });
   },
+  
+  reconnectSocket: () => {
+    // Disconnect first if connected
+    get().disconnectSocket();
+    // Then reconnect
+    get().connectSocket();
+  },
+  
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
+    set({ socket: null });
   },
 }));

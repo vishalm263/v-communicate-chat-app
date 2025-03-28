@@ -7,6 +7,13 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      minlength: 3,
+    },
     fullName: {
       type: String,
       required: true,
@@ -19,6 +26,10 @@ const userSchema = new mongoose.Schema(
     profilePic: {
       type: String,
       default: "",
+    },
+    hideStatus: {
+      type: Boolean, 
+      default: false,
     },
   },
   { timestamps: true }

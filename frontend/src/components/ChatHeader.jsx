@@ -1,35 +1,51 @@
-import { X } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import { formatTimeAgo } from "../lib/utils";
+import { ArrowLeft } from "lucide-react";
 
-const ChatHeader = () => {
+const ChatHeader = ({ isTyping }) => {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
+  const isOnline = selectedUser ? onlineUsers.includes(selectedUser._id) && !selectedUser.hideStatus : false;
+
   return (
-    <div className="p-2.5 border-b border-base-300">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Avatar */}
-          <div className="avatar">
-            <div className="size-10 rounded-full relative">
-              <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
-            </div>
-          </div>
+    <div className="p-3 flex items-center gap-3 border-b border-base-300">
+      {/* Back button for mobile */}
+      <button 
+        className="md:hidden btn btn-sm btn-ghost" 
+        onClick={() => setSelectedUser(null)}
+      >
+        <ArrowLeft size={20} />
+      </button>
+      
+      <div className="relative">
+        <img
+          src={selectedUser?.profilePic || "/avatar.png"}
+          alt="profile pic"
+          className="size-12 rounded-full object-cover"
+        />
+        {isOnline && (
+          <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
+        )}
+      </div>
 
-          {/* User info */}
-          <div>
-            <h3 className="font-medium">{selectedUser.fullName}</h3>
-            <p className="text-sm text-base-content/70">
-              {onlineUsers.includes(selectedUser._id) ? "Online" : "Offline"}
-            </p>
-          </div>
+      <div className="flex-1">
+        <div className="font-semibold">{selectedUser?.fullName}</div>
+        <div className="text-xs text-base-content/70 flex items-center">
+          {isTyping ? (
+            <span className="flex items-center gap-1 text-green-500">
+              <span className="animate-pulse">Typing</span>
+              <span className="dot-animate">...</span>
+            </span>
+          ) : isOnline ? (
+            "Online"
+          ) : selectedUser?.lastSeen ? (
+            <>Last seen {formatTimeAgo(selectedUser.lastSeen)}</>
+          ) : (
+            "Offline"
+          )}
         </div>
-
-        {/* Close button */}
-        <button onClick={() => setSelectedUser(null)}>
-          <X />
-        </button>
       </div>
     </div>
   );

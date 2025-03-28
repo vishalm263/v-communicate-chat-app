@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
+import { AtSign, Camera, Mail, Pencil, User } from "lucide-react";
+import toast from "react-hot-toast";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
   const [selectedImg, setSelectedImg] = useState(null);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -19,6 +22,32 @@ const ProfilePage = () => {
       setSelectedImg(base64Image);
       await updateProfile({ profilePic: base64Image });
     };
+  };
+
+  const handleUsernameEdit = () => {
+    if (isEditingUsername) {
+      if (newUsername.trim() === "") {
+        toast.error("Username cannot be empty");
+        return;
+      }
+
+      if (newUsername.trim().length < 3) {
+        toast.error("Username must be at least 3 characters");
+        return;
+      }
+
+      updateProfile({ username: newUsername.trim().toLowerCase() })
+        .then(() => {
+          setIsEditingUsername(false);
+          setNewUsername("");
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } else {
+      setNewUsername(authUser.username || "");
+      setIsEditingUsername(true);
+    }
   };
 
   return (
@@ -72,6 +101,35 @@ const ProfilePage = () => {
                 Full Name
               </div>
               <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullName}</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-sm text-zinc-400 flex items-center gap-2">
+                <AtSign className="w-4 h-4" />
+                Username
+                <button 
+                  onClick={handleUsernameEdit}
+                  className="ml-auto flex items-center gap-1 text-primary hover:text-primary-focus"
+                  disabled={isUpdatingProfile}
+                >
+                  <Pencil className="w-3 h-3" />
+                  <span className="text-xs">{isEditingUsername ? "Save" : "Edit"}</span>
+                </button>
+              </div>
+              {isEditingUsername ? (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-base-200 rounded-lg border focus:border-primary focus:outline-none"
+                    placeholder="Enter new username"
+                    disabled={isUpdatingProfile}
+                  />
+                </div>
+              ) : (
+                <p className="px-4 py-2.5 bg-base-200 rounded-lg border">@{authUser?.username}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
