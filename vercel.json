@@ -1,7 +1,21 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "version": 2,
+  "buildCommand": "cd backend && npm install && cd ../frontend && npm install && npm run build",
+  "outputDirectory": "frontend/public",
+  "routes": [
+    { 
+      "src": "/api/(.*)", 
+      "dest": "/backend/vercel.js" 
+    },
+    { 
+      "src": "/(.*)", 
+      "dest": "/frontend/public/index.html" 
+    }
   ],
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/public"
+  "functions": {
+    "backend/vercel.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
 } 
